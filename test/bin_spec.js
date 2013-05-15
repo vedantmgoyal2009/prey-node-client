@@ -11,11 +11,14 @@ var exec_env = process.env, // so we can override it later
     bin_path = path.join(__dirname, '..', 'bin'),
     bin_prey = path.join(bin_path, 'prey'),
     node_bin = path.join(bin_path, 'node'),
-    fake_node = path.join(os.tmpdir(), 'node'),
-    local_present = fs.existsSync(node_bin);
+    fake_node = path.join(os.tmpDir(), 'node');
 
-if (is_windows)
+if (is_windows) {
+  node_bin  += '.exe';
   fake_node += '.cmd';
+}
+
+var local_present = fs.existsSync(node_bin);
 
 function run_bin_prey(args, cb){
   exec(bin_prey + args, {env: exec_env}, cb);
@@ -29,6 +32,7 @@ function system_node_exists(cb){
 }
 
 describe('bin/prey', function(){
+
   before(function(done){
     var callbacks = 2;
     exec('node -v', function(err, out){
@@ -42,6 +46,7 @@ describe('bin/prey', function(){
   });
 
   if (local_present) { // no point in checking if it's not there
+
     describe('when local node binary is present', function(){
       before(function(done){
          fs.exists(node_bin, function(exists){
@@ -52,26 +57,27 @@ describe('bin/prey', function(){
 
       it('uses local node binary', function(done){
         run_bin_prey(' -N', function(err, out){
+         should.not.exist(err);
          out.should.include(node_versions.local);
          done();
         })
       });
     });
+
   }
 
   describe('when local node binary is NOT present', function(){
+
     // Temporarily move the local node bin, we'll put it back later
     before(function(done){
-      // Let's check, naturally if we have it...
-      if(fs.existsSync(node_bin)) {
-        fs.renameSync(node_bin, node_bin + '.tmp');
+      fs.rename(node_bin, node_bin + '.tmp', function(err){
+        if (err) return done();
+
         fs.exists(node_bin, function(exists){
           exists.should.not.be.true;
           done();
         });
-      } else {
-        done();
-      }
+      });
     });
 
     describe('and system node exists', function(){
@@ -117,11 +123,9 @@ describe('bin/prey', function(){
 
     // make sure the local bin is put back in place
     after(function(done){
-      if(fs.existsSync(node_bin)) {
-        fs.rename(node_bin + '.tmp', node_bin, done);
-      } else {
+      fs.rename(node_bin + '.tmp', node_bin, function(err){
         done();
-      }
+      });
     });
   });
 
@@ -130,7 +134,7 @@ describe('bin/prey', function(){
     // the arguments with which it is called.
     // We also set the PATH variable to that dir, to make sure it's called
     before(function(done){
-      exec_env = { 'PATH': os.tmpdir() };
+      exec_env = { 'PATH': os.tmpDir() };
       var fake_node_content = is_windows ? 'echo %*' : 'echo $@';
       fs.writeFile(fake_node, fake_node_content, {mode: 0755}, done);
     });
@@ -138,9 +142,7 @@ describe('bin/prey', function(){
     describe('when called with no params', function(){
       it('calls lib/agent/cli.js', function(done){
         run_bin_prey('', function(err, out){
-          var out_command =
-            is_windows ? 'lib\\agent\\cli.js' : 'lib/agent/cli.js';
-          out.should.include(out_command);
+          out.should.include(path.join('lib', 'agent', 'cli.js'));
           done();
         });
       });
@@ -149,9 +151,7 @@ describe('bin/prey', function(){
     describe('when called with `config` param', function(){
       it('calls lib/conf/cli.js', function(done){
         run_bin_prey(' config', function(err, out){
-          var out_command =
-            is_windows ? 'lib\\conf\\cli.js' : 'lib/conf/cli.js';
-          out.should.include(out_command);
+          out.should.include(path.join('lib', 'conf', 'cli.js'));
           done();
         });
       });
@@ -170,10 +170,7 @@ describe('bin/prey', function(){
     describe('when called with `test` argument', function(){
       it('calls mocha', function(done){
         run_bin_prey(' test', function(err, out){
-          var out_command =
-            is_windows  ? 'node_modules\\mocha\\bin\\mocha'
-                        : 'node_modules/mocha/bin/mocha';
-          out.should.include(out_command);
+          out.should.include(path.join('node_modules', 'mocha', 'bin', 'mocha'));
           done();
         });
       });
