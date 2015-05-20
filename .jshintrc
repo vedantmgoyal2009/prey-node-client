@@ -3,7 +3,7 @@
   "eqeqeq": true,
   "forin": true,
   "freeze": true,
-  "latedef": true,
+  "latedef": "nofunc",
   "laxbreak": true,
   "maxdepth": 3,
   "nonbsp": true,
